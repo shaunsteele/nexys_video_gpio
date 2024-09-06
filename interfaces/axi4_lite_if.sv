@@ -5,7 +5,8 @@
 interface axi4_lite_if # (
   parameter int ALEN  = 32,
   parameter int DLEN  = 32,
-  parameter int SLEN  = DLEN / 8
+  parameter int SLEN  = DLEN / 8,
+  parameter int BASE_ADDR = 0
 )(
   input var aclk,
   input var aresetn

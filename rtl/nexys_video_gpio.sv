@@ -2,14 +2,7 @@
 
 `default_nettype none
 
-module nexys_video_gpio # (
-  parameter int                 AXI_ALEN = 64,
-  parameter int                 AXI_DLEN = 64,
-  parameter int                 AXI_SLEN = AXI_DLEN / 8,
-  parameter bit [AXI_ALEN-1:0]  AXI_BASE_ADDR = 0,
-  parameter bit [AXI_ALEN-1:0]  R_STATUS_OFFSET = 0,
-  parameter bit [AXI_ALEN-1:0]  W_LED_OFFSET = 0
-)(
+module nexys_video_gpio(
   input var               clk,
   input var               rstn,
 
@@ -18,6 +11,8 @@ module nexys_video_gpio # (
   output var logic  [7:0] o_led
 );
 
+localparam bit [axi.ALEN-1:0] RStatusOffset = 0;
+localparam bit [axi.ALEN-1:0] WLEDOffset = 0;
 
 /* Write Controller */
 // register write enable
@@ -59,7 +54,7 @@ always_ff @(posedge clk) begin
     if (valid_led_aw) begin
       valid_led_aw <= ~b_en;
     end else begin
-      valid_led_aw <= axi.awvalid & (axi.awaddr == (AXI_BASE_ADDR + W_LED_OFFSET));
+      valid_led_aw <= axi.awvalid & (axi.awaddr == (axi.BASE_ADDR + WLEDOffset));
     end
   end
 end
@@ -101,10 +96,10 @@ always_ff @(posedge clk) begin
 end
 
 // write data channel buffer
-logic [AXI_DLEN-1:0] wdata;
+logic [axi.DLEN-1:0] wdata;
 always_ff @(posedge clk) begin
   if (axi.wvalid) begin
-    for (int i=0; i < AXI_SLEN; i++) begin
+    for (int i=0; i < axi.SLEN; i++) begin
       wdata[i+:8] <= (axi.wstrb[i]) ? axi.wdata[i+:8] : 8'b0;
     end
   end else begin
@@ -158,14 +153,17 @@ end
 // read status enable
 logic read_status;
 always_comb begin
-  read_status = axi.arvalid | (axi.araddr == AXI_BASE_ADDR);
+  read_status = axi.arvalid | (axi.araddr == (axi.BASE_ADDR + RStatusOffset));
 end
 
 // status data
-assign status = {
-  {(AXI_DLEN-8){1'b0}},
-  o_led
-};
+logic [axi.DLEN-1:0]  status;
+always_comb begin
+  status = {
+    {(axi.DLEN-8){1'b0}},
+    o_led
+  };
+end
 
 // read address channel ready
 always_ff @(posedge clk) begin
@@ -184,7 +182,7 @@ always_ff @(posedge clk) begin
     if (axi.rvalid) begin
       axi.rvalid <= ~axi.rready;
     end else begin
-      axi.rvalid <= axi.arvalid & axi.aready;
+      axi.rvalid <= axi.arvalid & axi.arready;
     end
   end
 end
